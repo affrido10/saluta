@@ -5,11 +5,11 @@ const path = require("path");
 async function convertDocx() {
   const files = [
     { 
-      name: "kratkie_otvety_PMDK03_qa.docx", 
+      name: "theory_answers_mdk03_corrected.docx", 
       type: "theory" 
     },
     { 
-      name: "practical_instructions_MDK03_02.docx", 
+      name: "practical_answers_mdk03_detailed.docx", 
       type: "practice" 
     }
   ];
@@ -37,6 +37,8 @@ async function convertDocx() {
           type: file.type
         });
       });
+    } else {
+      console.log(`Файл не найден: ${file.name}`);
     }
   }
 
