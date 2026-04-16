@@ -2,47 +2,46 @@ const mammoth = require("mammoth");
 const fs = require("fs");
 const path = require("path");
 
-async function convertDocx() {
-  const files = [
-    { 
-      name: "theory_answers_mdk03_corrected.docx", 
-      type: "theory" 
-    },
-    { 
-      name: "practical_answers_mdk03_detailed.docx", 
-      type: "practice" 
-    }
-  ];
-
-  let allTickets = [];
-
-  for (const file of files) {
-    const docxPath = path.join(process.cwd(), file.name);
-    
-    if (fs.existsSync(docxPath)) {
-      const result = await mammoth.convertToHtml({ path: docxPath });
-      const html = result.value;
-
-      const sections = html.split(/<h1>|<h2>/).filter(Boolean);
-      
-      sections.forEach((section, index) => {
-        const titleEnd = section.indexOf("</h1>") !== -1 ? section.indexOf("</h1>") : section.indexOf("</h2>");
-        const title = section.substring(0, titleEnd).replace(/<[^>]*>/g, "").trim();
-        const content = section.substring(titleEnd + 5).trim();
-
-        allTickets.push({
-          id: allTickets.length + 1,
-          title: title || `Вопрос ${allTickets.length + 1}`,
-          content: content,
-          type: file.type
-        });
-      });
-    } else {
-      console.log(`Файл не найден: ${file.name}`);
-    }
+async function processFile(fileName, type) {
+  const filePath = path.join(process.cwd(), fileName);
+  if (!fs.existsSync(filePath)) {
+    console.log(`Файл ${fileName} не найден, пропускаю...`);
+    return [];
   }
 
-  fs.writeFileSync(path.join(process.cwd(), "data.json"), JSON.stringify(allTickets, null, 2));
+  // Конвертируем в текст, так как его легче резать регулярками, чем HTML
+  const result = await mammoth.extractRawText({ path: filePath });
+  const text = result.value;
+
+  // Регулярка ищет начало вопроса (цифра, точка, пробел) и захватывает всё до следующей цифры
+  // Подходит для форматов "1. Вопрос:" и просто "1. Настройте..."
+  const regex = /(\n\d+[\.\s]+[\s\S]+?)(?=\n\d+[\.\s]+|$)/g;
+  const matches = text.matchAll(regex);
+  
+  const blocks = [];
+  for (const match of matches) {
+    const rawBlock = match[0].trim();
+    const lines = rawBlock.split('\n');
+    const title = lines[0].trim(); // Первая строка — это заголовок (вопрос)
+    const content = lines.slice(1).join('<br>').trim(); // Остальное — контент
+
+    blocks.push({
+      id: parseInt(title) || Math.random(),
+      title: title,
+      content: content || "Ответ внутри файла",
+      type: type
+    });
+  }
+  return blocks;
 }
 
-convertDocx();
+async function run() {
+  const theory = await processFile("theory_answers_mdk03_corrected.docx", "theory");
+  const practice = await processFile("practical_answers_mdk03_detailed.docx", "practice");
+  
+  const allData = [...theory, ...practice];
+  fs.writeFileSync(path.join(process.cwd(), "data.json"), JSON.stringify(allData, null, 2));
+  console.log(`Готово! Обработано ${allData.length} вопросов.`);
+}
+
+run();
