@@ -1,7 +1,6 @@
 "use client";
-
 import { useState, useMemo } from "react";
-import { Search, Book, PenTool, Hash, AlertCircle } from "lucide-react";
+import { Search, Book, PenTool, Hash, Info } from "lucide-react";
 import data from "../data.json";
 
 export default function ExamSite() {
@@ -9,90 +8,76 @@ export default function ExamSite() {
   const [tab, setTab] = useState<"theory" | "practice">("theory");
 
   const filtered = useMemo(() => {
-    const searchTerms = query.toLowerCase().trim().split(/\s+/); // Разделяем поиск на отдельные слова
-    
-    return (data as any[]).filter((item) => {
-      const matchTab = item.type === tab;
-      
-      // Очищаем текст от лишних символов для более легкого поиска
-      const itemTitle = item.title.toLowerCase();
-      const itemContent = item.content.toLowerCase();
-      
-      // Проверяем, содержатся ли все слова из поиска в заголовке или контенте
-      const matchSearch = searchTerms.every(term => 
-        itemTitle.includes(term) || 
-        itemContent.includes(term) ||
-        String(item.id) === term
-      );
+    const q = query.toLowerCase().trim();
+    if (!q) return data.filter(item => item.type === tab);
 
-      return matchTab && matchSearch;
+    return data.filter((item) => {
+      const isCorrectTab = item.type === tab;
+      const inTitle = item.title.toLowerCase().includes(q);
+      const inContent = item.content.toLowerCase().includes(q);
+      const byId = item.id.toString() === q || item.title.startsWith(q);
+      
+      return isCorrectTab && (inTitle || inContent || byId);
     });
   }, [query, tab]);
 
   return (
-    <div className="max-w-3xl mx-auto min-h-screen px-4 pb-20">
-      <header className="sticky top-0 bg-slate-50/90 backdrop-blur-md pt-8 pb-4 z-10">
-        <h1 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Hash className="text-white w-5 h-5" />
+    <div className="max-w-3xl mx-auto min-h-screen px-4 pb-10 bg-slate-50">
+      <header className="sticky top-0 bg-slate-50/95 backdrop-blur-sm pt-8 pb-4 z-10">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+            <Hash className="text-white w-6 h-6" />
           </div>
-          ExamHelper
-        </h1>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">MDK.HELP</h1>
+        </div>
         
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Начните вводить текст вопроса..."
-            className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 shadow-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-lg"
-            value={query}
+            placeholder="Номер билета или текст вопроса..."
+            className="w-full bg-white border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-4 shadow-sm outline-none focus:border-blue-500 transition-all text-lg"
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
 
-        <nav className="flex gap-2 mt-6 bg-slate-200/50 p-1 rounded-xl w-fit">
+        <div className="flex gap-2 mt-6">
           <button
             onClick={() => setTab("theory")}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-              tab === "theory" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${
+              tab === "theory" ? "bg-blue-600 text-white shadow-md" : "bg-white text-slate-500 hover:bg-slate-100"
             }`}
           >
-            <Book className="w-4 h-4" /> Теория ({ (data as any[]).filter(d => d.type === 'theory').length })
+            <Book className="w-5 h-5" /> Теория
           </button>
           <button
             onClick={() => setTab("practice")}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-              tab === "practice" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${
+              tab === "practice" ? "bg-blue-600 text-white shadow-md" : "bg-white text-slate-500 hover:bg-slate-100"
             }`}
           >
-            <PenTool className="w-4 h-4" /> Практика ({ (data as any[]).filter(d => d.type === 'practice').length })
+            <PenTool className="w-5 h-5" /> Практика
           </button>
-        </nav>
+        </div>
       </header>
 
-      <main className="mt-8 space-y-4">
+      <main className="mt-6 space-y-4">
         {filtered.length > 0 ? (
-          filtered.map((item) => (
-            <div key={item.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-bold text-slate-800 leading-tight tracking-tight">
-                  {item.title}
-                </h2>
-                <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded-md uppercase">
-                  Вопрос {item.id}
-                </span>
+          filtered.map((item: any) => (
+            <div key={item.id + item.type} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+              <div className="flex items-start justify-between mb-4">
+                <h2 className="text-lg font-bold text-slate-800 leading-snug">{item.title}</h2>
               </div>
               <div 
-                className="prose prose-slate max-w-none text-slate-600 text-sm md:text-base leading-relaxed"
+                className="text-slate-600 text-base leading-relaxed prose-blue"
                 dangerouslySetInnerHTML={{ __html: item.content }}
               />
             </div>
           ))
         ) : (
-          <div className="text-center py-20 bg-slate-100/50 rounded-3xl border-2 border-dashed border-slate-200">
-            <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">Ничего не найдено</p>
-            <p className="text-slate-400 text-sm">Попробуйте ввести только ключевое слово (например: "коммутации")</p>
+          <div className="text-center py-20">
+            <Info className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500 font-medium">Ничего не нашли. Попробуй другое слово.</p>
           </div>
         )}
       </main>
